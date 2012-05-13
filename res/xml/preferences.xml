@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+        <EditTextPreference android:key="UserName" android:title="User Name" android:summary="Site Confidence User name"/>
+        <EditTextPreference android:key="Password" android:title="Password" android:summary="Password for Site Confidence User"/>
+        <EditTextPreference android:key="Account" android:title="Site Confidence Account Code" android:summary="Account code returned by the API that needs to be displayed"/>
+        <EditTextPreference android:defaultValue="60000" android:key="Refresh" android:title="Refresh Milliseconds" android:summary="Interval to wait before refreshing the screen (milliseconds)"/>
+    </PreferenceScreen>
