@@ -1,7 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-    <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-        <EditTextPreference android:key="UserName" android:title="User Name" android:summary="Site Confidence User name"/>
-        <EditTextPreference android:key="Password" android:title="Password" android:summary="Password for Site Confidence User"/>
-        <EditTextPreference android:key="Account" android:title="Site Confidence Account Code" android:summary="Account code returned by the API that needs to be displayed"/>
-        <EditTextPreference android:defaultValue="60000" android:key="Refresh" android:title="Refresh Milliseconds" android:summary="Interval to wait before refreshing the screen (milliseconds)"/>
-    </PreferenceScreen>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <EditTextPreference
+        android:key="UserName"
+        android:summary="Site Confidence User name"
+        android:title="User Name" />
+    <EditTextPreference
+        android:key="Password"
+        android:password="true"
+        android:summary="Password for Site Confidence User"
+        android:title="Password" />
+    <EditTextPreference
+        android:key="Account"
+        android:summary="Account code returned by the API that needs to be displayed"
+        android:title="Site Confidence Account Code" />
+    <EditTextPreference
+        android:defaultValue="60000"
+        android:key="Refresh"
+        android:summary="Interval to wait before refreshing the screen (milliseconds)"
+        android:title="Refresh Milliseconds" />
+    <EditTextPreference
+        android:defaultValue="10"
+        android:key="FontSize"
+        android:summary="Font size to display screen"
+        android:title="Font Size" />
+    
+    <CheckBoxPreference
+        android:key="FullScreen"
+        android:title="Full Screen"
+        android:summary="Display screen without header bar etc."
+        android:defaultValue="false" />
+
+</PreferenceScreen>

@@ -41,10 +41,12 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.WebView;
-//TODO security key expiry
 //TODO handle where we have less than 4 results (not sure if it works yet)
-//TODO sort by test tames
+//TODO sort by test names
+
 public class SCAPIActivity extends Activity {
 	/** Called when the activity is first created. */
 	@Override
@@ -52,9 +54,6 @@ public class SCAPIActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		MblnTimerRunning = false;
 		try {
-			// Browser control to display the HTML generated
-			objWebView = new WebView(this);
-			setContentView(objWebView);
 			// User name / password / SC Account / refresh interval are held as
 			// preferences
 			// we retrieve them here
@@ -65,16 +64,26 @@ public class SCAPIActivity extends Activity {
 			MstrAccount = sharedPrefs.getString("Account", "");
 			String strInterval = sharedPrefs.getString("Refresh", "60000");
 			MintRefresh = Integer.parseInt(strInterval);
+			boolean blnFullScreen = sharedPrefs.getBoolean("FullScreen", false);
+			MintFontSize = Integer.parseInt(sharedPrefs.getString("FontSize", "10"));
+			MblnRestart = false;
+			MblnTimerRunning = false;
 			// If preferences not set open the screen to input them
 			if (MstrUserName.equals("") || MstrPassword.equals("")
 					|| MstrAccount.equals("")) {
+				MblnRestart = true;
 				startActivity(new Intent(this, QuickPrefsActivity.class));
-				MstrUserName = sharedPrefs.getString("UserName", "");
-				MstrPassword = sharedPrefs.getString("Password", "");
-				MstrAccount = sharedPrefs.getString("Account", "");
-				strInterval = sharedPrefs.getString("Refresh", "60000");
-				MintRefresh = Integer.parseInt(strInterval);
 			}
+
+			if (blnFullScreen) {
+				requestWindowFeature(Window.FEATURE_NO_TITLE);
+				getWindow().setFlags(
+						WindowManager.LayoutParams.FLAG_FULLSCREEN,
+						WindowManager.LayoutParams.FLAG_FULLSCREEN);
+			}
+			// Browser control to display the HTML generated
+			objWebView = new WebView(this);
+			setContentView(objWebView);
 			// get the security key for this session
 			getKey();
 			// Number of tests to retrieve
@@ -84,7 +93,8 @@ public class SCAPIActivity extends Activity {
 				// start the refresh timer
 				objTimer = new Timer();
 				objUpdateScreen = new UpdateScreen();
-				// start after 1 second then every MintRefresh milliseconds (default 60 seconds)
+				// start after 1 second then every MintRefresh milliseconds
+				// (default 60 seconds)
 				objTimer.schedule(objUpdateScreen, 1000, MintRefresh);
 				MblnTimerRunning = true;
 			} else {
@@ -99,19 +109,26 @@ public class SCAPIActivity extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		menu.add(Menu.NONE, 0, 0, "Preferences");
-		menu.add(Menu.NONE, 1, 0, "Resfresh");
+		menu.add(Menu.NONE, 1, 0, "Refresh");
+		menu.add(Menu.NONE, 2, 0, "Exit");
 		return super.onCreateOptionsMenu(menu);
 	}
+
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case 0:
-			//show preferences menu
+			// show preferences menu
+			MblnRestart = true;
 			startActivity(new Intent(this, QuickPrefsActivity.class));
 			return true;
 		case 1:
-			//refresh screen
+			// refresh screen
 			refreshScreen();
+			return true;
+		case 2:
+			// Exit
+			finish();
 			return true;
 		}
 		return false;
@@ -135,6 +152,24 @@ public class SCAPIActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		if (MblnRestart) {
+			SharedPreferences sharedPrefs = PreferenceManager
+					.getDefaultSharedPreferences(this);
+			MstrUserName = sharedPrefs.getString("UserName", "");
+			MstrPassword = sharedPrefs.getString("Password", "");
+			MstrAccount = sharedPrefs.getString("Account", "");
+			String strInterval = sharedPrefs.getString("Refresh", "60000");
+			MintRefresh = Integer.parseInt(strInterval);
+			MintFontSize = Integer.parseInt(sharedPrefs.getString("FontSize", "10"));
+			MblnRestart = false;
+			// Browser control to display the HTML generated
+			objWebView = new WebView(this);
+			setContentView(objWebView);
+			// get the security key for this session
+			getKey();
+			// Number of tests to retrieve
+			MintRetTests = 40;
+		}
 		try {
 			if (MblnTimerRunning == false && MintRefresh > 0) {
 				objTimer.schedule(objUpdateScreen, 1000, MintRefresh);
@@ -161,6 +196,9 @@ public class SCAPIActivity extends Activity {
 	private String MstrKey;
 	private int MintRetTests;
 	private boolean MblnTimerRunning;
+	private int MintFontSize;
+	private Calendar MdtKeyExpire;
+	private boolean MblnRestart;
 
 	// timer task to update the screen
 	class UpdateScreen extends TimerTask {
@@ -175,7 +213,7 @@ public class SCAPIActivity extends Activity {
 		}
 	}
 
-	//Manual refresh
+	// Manual refresh
 	private void refreshScreen() {
 		try {
 			String strHtml = null;
@@ -196,6 +234,10 @@ public class SCAPIActivity extends Activity {
 		String strDate;
 		// set the start and end times for the call
 		Calendar dtNow = Calendar.getInstance();
+		// if the SC security key has expired get a new one
+		if (dtNow.compareTo(MdtKeyExpire) == 1) {
+			getKey();
+		}
 		Calendar dtStart = Calendar.getInstance();
 		dtStart.add(Calendar.HOUR, -2);
 		dtNow.add(Calendar.HOUR, 1);
@@ -222,7 +264,7 @@ public class SCAPIActivity extends Activity {
 		strHtml = strHtml + "<head>";
 		strHtml = strHtml + "<title>Site Confidence Monitor</title>";
 		strHtml = strHtml
-				+ "<style type=\"text/css\">BODY {background:#FFFFFF; color:#000000; margin-left:0.0cm; margin-right:0.0cm; margin-top:0.0cm;scrollbar-face-color:#E6E6FA; scrollbar-shadow-color:#9999FF}TH {color:white; font-family:Tahoma; font-size:10pt}TD {font-family:Tahoma; font-size:10pt}.formbar {COLOR:#ffffff; background:#000000}.formtxt {margin-left:10px; padding-top:3px; background:#E6E6FA}</style>";
+				+ "<style type=\"text/css\">BODY {background:#FFFFFF; color:#000000; margin-left:0.0cm; margin-right:0.0cm; margin-top:0.0cm;scrollbar-face-color:#E6E6FA; scrollbar-shadow-color:#9999FF}TH {color:white; font-family:Tahoma; font-size:" + MintFontSize + "pt}TD {font-family:Tahoma; font-size:" + MintFontSize + "pt}.formbar {COLOR:#ffffff; background:#000000}.formtxt {margin-left:10px; padding-top:3px; background:#E6E6FA}</style>";
 		strHtml = strHtml + "</head>";
 		strHtml = strHtml + "<body>";
 		strHtml = strHtml + "<table>";
@@ -313,7 +355,8 @@ public class SCAPIActivity extends Activity {
 					// set to -1 to start with
 					intFirstTest = -1;
 					// sc does not do BST properly so adjust times
-					// LastTestLocalDateTime is correct but LocalDateTime is GMT not BST
+					// LastTestLocalDateTime is correct but LocalDateTime is GMT
+					// not BST
 					if (objNodeListTestResult.getLength() > 0) {
 						// get the time stamp for the last test node (latest)
 						objNodeTestResult = (Element) objNodeListTestResult
@@ -332,9 +375,10 @@ public class SCAPIActivity extends Activity {
 						intHours = 0;
 					}
 
-					//find the latest completed test
-					//start with the most recent and work backwards until we find one
-					//less than or equal to LastTestLocalDateTime
+					// find the latest completed test
+					// start with the most recent and work backwards until we
+					// find one
+					// less than or equal to LastTestLocalDateTime
 					for (int j = objNodeListTestResult.getLength(); j > 0; j--) {
 						objNodeTestResult = (Element) objNodeListTestResult
 								.item(j - 1);
@@ -349,17 +393,21 @@ public class SCAPIActivity extends Activity {
 							break;
 						}
 					}
-					
-					//Build html row for this test
+
+					// Build html row for this test
 					try {
 						strTemp = "";
-						// if we didn't find any tests use 4 empty cells in the row
+						// if we didn't find any tests use 4 empty cells in the
+						// row
 						if (intFirstTest == -1) {
 							strStatus = "OK";
 							strTemp = "<td align=\"center\">.</td><td align=\"center\">.</td><td align=\"center\">.</td><td align=\"center\">.</td>";
 						} else {
-							//if we have less than 4 tests use empty cells for each test we don't have
+							// if we have less than 4 tests use empty cells for
+							// each test we don't have
+							int intDisplayTests = 3;
 							if (intFirstTest < 4) {
+								intDisplayTests = intFirstTest - 1;
 								for (int j = 4; j > intFirstTest; j--) {
 									strTemp = strTemp
 											+ "<td align=\"center\">.</td>";
@@ -367,7 +415,7 @@ public class SCAPIActivity extends Activity {
 
 							}
 							strStatus = "";
-							for (int j = intFirstTest - 3; j <= intFirstTest; j++) {
+							for (int j = intFirstTest - intDisplayTests; j <= intFirstTest; j++) {
 								objNodeTestResult = (Element) objNodeListTestResult
 										.item(j - 1);
 								strStatus = objNodeTestResult
@@ -457,7 +505,12 @@ public class SCAPIActivity extends Activity {
 			db = dbf.newDocumentBuilder();
 			doc = db.parse(new InputSource(new StringReader(strXML)));
 			NodeList objAPINl = doc.getElementsByTagName("ApiKey");
+			// @Lifetime="3600"
 			Element objAPINode = (Element) objAPINl.item(0);
+			String strLifeTime = objAPINode.getAttribute("Lifetime");
+			int intLifeTime = Integer.parseInt(strLifeTime);
+			MdtKeyExpire = Calendar.getInstance();
+			MdtKeyExpire.add(Calendar.SECOND, intLifeTime);
 			StringBuffer buffer = new StringBuffer();
 			NodeList childList = objAPINode.getChildNodes();
 			for (int i = 0; i < childList.getLength(); i++) {
